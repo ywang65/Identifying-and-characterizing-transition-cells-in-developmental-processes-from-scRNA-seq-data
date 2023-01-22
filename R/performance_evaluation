@@ -1,0 +1,38 @@
+library(dplyr)
+library(Seurat)
+library(pROC)
+
+compute_roc_cellrank<-function(file){
+	cellrank<-read.csv(file)
+	cellrank$X<-sapply(cellrank$X,function(x) gsub('\\.','-',x))
+	cellrank$X[grep('^X[0-9].*',cellrank$X)]<-sub('X','',cellrank$X[grep('^X[0-9].*',cellrank$X)])
+	cellrank<-cellrank %>% mutate('non_terminal'=1-terminal_states_probs)
+	data<-AddMetaData(data,cellrank %>% select(X,non_terminal) %>% tibble::column_to_rownames('X'))
+	res<-roc(data$celltype,data$non_terminal)
+	print(res)
+	return(data)
+}
+
+compute_roc_mutran<-function(file){
+    mutrans<-read.csv(file,row.names=1)
+    data<-AddMetaData(data,mutrans)
+    #data$celltype=(ifelse(data$cell_type=='AT2 activated','transition','stable'))
+    res<-roc(data$celltype,data$entropy)
+    print(res)
+    return(data)
+}
+
+compute_roc_pearson<-function(file){
+	pearson<-readRDS(file)
+	pearson<-Reduce(function(x,y) rbind(x,y),pearson)
+	#pearson<-apply(pearson,c(1,2),function(x) fisher_trans(x))
+	pearson<-abs(pearson)
+	res_1<-apply(pearson,1,function(x) ks.test(x,pearson[1,],alternative='greater')$statistic)
+	res_2<-apply(pearson,1,function(x) ks.test(x,pearson[1,],alternative='less')$statistic)
+	res<-find_ks_d(pearson[which.max(res_1),],pearson[which.max(res_2),])
+	tmp<-apply(pearson,1,function(x) sum(abs(x)>min(unlist(res)) & abs(x)<max(unlist(res)),na.rm=T)/sum(abs(x)>=0,na.rm=T))
+	data<-AddMetaData(data,data.frame('pearson'=tmp))
+	res<-roc(data$celltype,data$pearson)
+	print(res)
+	return(data)
+}
