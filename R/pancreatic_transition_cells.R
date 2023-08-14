@@ -43,7 +43,7 @@ for(i in trans$seurat_clusters %>% unique()){
 # gene expressions violin plot
 pdf('trans_cells.pdf',height=3)
 VlnPlot(trans, features = c('Muc6','Pgc','Tff1'),pt.size=0.00) # gastric
-VlnPlot(trans, features = c('Cd44','Krt7','Fn1'),pt.size=0.00) # tumor
+VlnPlot(trans, features = c('Cd44','Krt7','Fn1'),pt.size=0.00) # EMT
 VlnPlot(trans, features = c('Mki67','Cdk1','Cdc20'),pt.size=0.00) #dividing
 dev.off()
 
