@@ -22,7 +22,6 @@ compute_roc_cellrank<-function(file){
 compute_roc_mutran<-function(file){
     mutrans<-read.csv(file,row.names=1)
     data<-AddMetaData(data,mutrans)
-    #data$celltype=(ifelse(data$cell_type=='AT2 activated','transition','stable'))
     res<-roc(data$celltype,data$entropy)
     print(res)
     return(data)
