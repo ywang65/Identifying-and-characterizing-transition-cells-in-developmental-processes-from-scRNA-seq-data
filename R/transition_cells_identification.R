@@ -44,6 +44,8 @@ for(i in data$seurat_clusters %>% unique()){
         res_2<-apply(pearson,1,function(x) ks.test(x,pearson[1,],alternative='less')$statistic)
         res[[as.character(i)]]<-find_ks_d(pearson[which.max(res_1),],pearson[which.max(res_2),])
 }
+res<-Reduce(function(x,y) rbind(x,y), res)
+data<-AddMetaData(data,data.frame('transition_index'=tmp))
 saveRDS(res,'transition_index.rds')
 
 gene_pearson<-function(data,highly_variable_gene=NULL,n_neighbor=200){
