@@ -1,16 +1,9 @@
 library(Seurat)
 library(dplyr)
 
-# compute transition index
-pearson<-abs(pearson)
-res_1<-apply(pearson,1,function(x) ks.test(x,pearson[1,],alternative='greater')$statistic)
-res_2<-apply(pearson,1,function(x) ks.test(x,pearson[1,],alternative='less')$statistic)
-res<-find_ks_d(pearson[which.max(res_1),],pearson[which.max(res_2),])
-tmp<-apply(pearson,1,function(x) sum(abs(x)>min(unlist(res)) & abs(x)<max(unlist(res)),na.rm=T)/sum(abs(x)>=0,na.rm=T))
-data<-AddMetaData(data,data.frame('pearson'=tmp))
-
 # compare transition index for metaplastic cells
 meta<-subset(data,celltype=='Metaplastic')
+meta_ctrl<-subset(meta,time_point=='3M')
 meta@meta.data %>% filter(time_point!='3M') %>% group_by(time_point) %>% summarize(p_value = wilcox.test(pearson,meta_ctrl$pearson)$p.value) %>% 
 mutate(p_adj=p.adjust(p_value,method='BH',n=3))
 #  A tibble: 3 x 3
@@ -52,6 +45,42 @@ pdf('trans_cells.pdf',height=3)
 VlnPlot(trans, features = c('Muc6','Pgc','Tff1'),pt.size=0.00) # gastric
 VlnPlot(trans, features = c('Cd44','Krt7','Fn1'),pt.size=0.00) # tumor
 VlnPlot(trans, features = c('Mki67','Cdk1','Cdc20'),pt.size=0.00) #dividing
+dev.off()
+
+# finding DEGs of transition cells at 3M PTI and DEGs pathway enrichment analysis 
+# using HALLMARK database
+meta<-AddMetaData(meta,as.data.frame(trans$seurat_clusters),col.name='group')
+meta$group<-as.character(meta$group)
+meta$group[ctrl]<-'ctrl'
+meta<-meta[,!is.na(meta$group)]
+Idents(meta)<-meta$group
+library(msigdbr)
+h_gene_sets = msigdbr(species = "Mus musculus", category = "H")
+create_gene_set<-function(gene_set){
+    g.names <- unique(gene_set$gs_name)
+    g.sets <- vector("list",length=length(g.names))
+    names(g.sets) <- g.names
+    for (i in names(g.sets)) {
+        g.sets[[i]] <- pull(gene_set[gene_set$gs_name==i,"gene_symbol"])
+    }
+    return(g.sets)
+}
+pdf("3M_meta_trans_deg_pathway.pdf")
+for(i in c('0','1','2','3')){
+deg<-read.csv(paste0('meta_deg_cluster',i,'.csv'),row.names=1)
+plot.new()
+pathway<-create_gene_set(h_gene_sets)
+gene_rank<-deg$avg_log2FC
+names(gene_rank)<-rownames(deg)
+fgseaRes <- fgsea(pathways = pathway,
+                  stats    = gene_rank,
+                  minSize  = 15,
+                  maxSize  = 500)
+topPathwaysUp <- fgseaRes[ES > 0 & padj<0.01][head(order(padj), n=10), pathway]
+topPathwaysDown <- fgseaRes[ES < 0 & padj<0.01][head(order(padj), n=10), pathway]
+topPathways <- c(topPathwaysUp, rev(topPathwaysDown))
+plotGseaTable(pathway[topPathways], gene_rank, fgseaRes, gseaParam=0.5)
+}
 dev.off()
 
 # transitioning acinar cells at 6W PTI 
