@@ -89,5 +89,5 @@ for(i in data$seurat_clusters %>% unique()){
         res[[as.character(i)]]<-apply(pearson,1,function(x) sum(abs(x)>min(unlist(res_tmp)) & abs(x)<max(unlist(res_tmp)),na.rm=T)/sum(abs(x)>=0,na.rm=T))
 }
 res<-Reduce(function(x,y) rbind(x,y), res)
-data<-AddMetaData(data,data.frame('transition_index'=tmp))
+data<-AddMetaData(data,data.frame('transition_index'=res))
 saveRDS(res,'transition_index.rds')
