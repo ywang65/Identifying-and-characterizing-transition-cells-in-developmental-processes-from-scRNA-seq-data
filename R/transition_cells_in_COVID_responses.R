@@ -1,15 +1,6 @@
 library(Seurat)
 library(dplyr)
 
-# compute transition index
-pearson<-Reduce(function(x,y) rbind(x,y),pearson)
-pearson<-abs(pearson)
-res_1<-apply(pearson,1,function(x) ks.test(x,pearson[1,],alternative='greater')$statistic)
-res_2<-apply(pearson,1,function(x) ks.test(x,pearson[1,],alternative='less')$statistic)
-res<-find_ks_d(pearson[which.max(res_1),],pearson[which.max(res_2),])
-tmp<-apply(pearson,1,function(x) sum(abs(x)>min(unlist(res)) & abs(x)<max(unlist(res)),na.rm=T)/sum(abs(x)>=0,na.rm=T))
-data<-AddMetaData(data,data.frame('pearson'=tmp))
-
 # find transition cells
 # B cells
 stats=data@meta.data %>% filter(celltype=='B',pearson>0.22) %>% group_by(treatment,hamster) %>% summarize(n=n()) %>% left_join(data@meta.data %>%
